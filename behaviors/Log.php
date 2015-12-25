@@ -1,6 +1,7 @@
 <?php
 namespace log\behaviors;
 
+use Yii;
 use yii\db\ActiveRecord;
 use yii\base\Behavior;
 use yii\db\AfterSaveEvent;
@@ -89,13 +90,22 @@ class Log extends Behavior
     {
         if(! $event instanceof AfterSaveEvent) return;
 
-        $attributes = $this->owner->getAttributes($logAttributes);
+        $attributes = $this->owner->getAttributes($this->logAttributes);
         $attributes['doc_id'] = $attributes['id'];
         unset($attributes['id']);
         $attributes[$this->changedAttributesField] = array_keys($event->changedAttributes);
         $attributes[$this->changedByField] = Yii::$app->user->id;
 
+        $logClass = $this->logClass;
         $log = new $logClass($attributes);
-        $log->save();
+/*
+        echo "<pre>";
+        var_dump($attributes);
+        echo "</pre>";
+        die();
+*/
+        if(! $log->save()) {
+            throw new ErrorException(print_r($log->errors,true));
+        }
     }
 }
