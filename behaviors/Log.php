@@ -9,9 +9,10 @@ use yii\db\AfterSaveEvent;
  * Behavior class for logging all changes to a log table.
  * It requires a log model. By default it is owner class name + 'Log'.
  *
- * @prop array $logAttributes A list of all attributes to be saved in the log table
- * @prop string $logClass     Class name for the log model
- *
+ * @prop array  $logAttributes          A list of all attributes to be saved in the log table
+ * @prop string $logClass               Class name for the log model
+ * @prop string $changedAttributesField Field in the table to store changed attributes list. Default: changed_attributes
+ * @prop string $changedByField         Field in the table to store the author of the changes (Yii::$app->user->id). Default: changed_by
  *
  */
 class Log extends Behavior
@@ -25,6 +26,18 @@ class Log extends Behavior
      * Class name for the log model
      */
     public $logClass;
+
+    /**
+     * Field of the table to store id of the user who changed the record
+     * Default: 'changed_by'
+     */
+    public $changedByField = 'changed_by';
+
+    /**
+     * Field to store changed attributes
+     * Default: 'changed_attributes'
+     */
+    public $changedAttributesField = 'changed_attributes';
 
     /**
      * @inherit
@@ -79,7 +92,8 @@ class Log extends Behavior
         $attributes = $this->owner->getAttributes($logAttributes);
         $attributes['doc_id'] = $attributes['id'];
         unset($attributes['id']);
-        $attributes['changedAttributes'] = array_keys($event->changedAttributes);
+        $attributes[$this->changedAttributesField] = array_keys($event->changedAttributes);
+        $attributes[$this->changedByField] = Yii::$app->user->id;
 
         $log = new $logClass($attributes);
         $log->save();
