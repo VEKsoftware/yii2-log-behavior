@@ -14,6 +14,7 @@ use yii\db\AfterSaveEvent;
  * @prop string $logClass               Class name for the log model
  * @prop string $changedAttributesField Field in the table to store changed attributes list. Default: changed_attributes
  * @prop string $changedByField         Field in the table to store the author of the changes (Yii::$app->user->id). Default: changed_by
+ * @prop string $timeField              Field where the time of last change is stored. Default: atime
  *
  */
 class Log extends Behavior
@@ -41,11 +42,22 @@ class Log extends Behavior
     public $changedAttributesField = 'changed_attributes';
 
     /**
+     * Field where the time of last change is stored
+     * Default: 'atime'
+     */
+    public $timeField = 'atime';
+
+    private $_to_save_log = false;
+    private $_changed_attributes = [];
+
+    /**
      * @inherit
      */
     public function events()
     {
         return [
+            ActiveRecord::EVENT_BEFORE_INSERT => 'logBeforeSave',
+            ActiveRecord::EVENT_BEFORE_UPDATE => 'logBeforeSave',
             ActiveRecord::EVENT_AFTER_INSERT => 'logAfterSave',
             ActiveRecord::EVENT_AFTER_UPDATE => 'logAfterSave',
         ];
@@ -82,6 +94,38 @@ class Log extends Behavior
     }
 
     /**
+     * Sets the time of change
+     *
+     * @param \yii\db\BeforeSaveEvent $event
+     */
+    public function logBeforeSave($event)
+    {
+        $attributes = array_diff($this->logAttributes,[$this->timeField]);
+        $new = $this->owner->getDirtyAttributes($attributes);
+        $old = $this->owner->oldAttributes;
+        $diff = array_diff($new,$old);
+        $this->_changed_attributes = $diff;
+        if(count($diff) > 0) {
+            $this->owner->{$this->timeField} = date('Y-m-d H:i:s');
+            $this->_to_save_log = true;
+        } else {
+            $this->_to_save_log = false;
+        }
+/*
+        echo "<pre>";
+        var_dump($this->owner->{$this->timeField});
+        var_dump($attributes);
+        echo "dirty\n";
+        var_dump($dirty);
+        echo "active\n";
+        var_dump($active);
+        var_dump($diff);
+        echo "</pre>";
+        die();
+*/
+    }
+
+    /**
      * Saves a record to the log table
      *
      * @param \yii\db\AfterSaveEvent $event
@@ -89,11 +133,13 @@ class Log extends Behavior
     public function logAfterSave($event)
     {
         if(! $event instanceof AfterSaveEvent) return;
+        if(is_null($event->changedAttributes)) return;
+        if(! $this->_to_save_log) return;
 
         $attributes = $this->owner->getAttributes($this->logAttributes);
         $attributes['doc_id'] = $attributes['id'];
         unset($attributes['id']);
-        $attributes[$this->changedAttributesField] = array_keys($event->changedAttributes);
+        $attributes[$this->changedAttributesField] = '{'.implode(',',array_keys($this->_changed_attributes)).'}';
         $attributes[$this->changedByField] = Yii::$app->user->id;
 
         $logClass = $this->logClass;
@@ -101,9 +147,14 @@ class Log extends Behavior
 /*
         echo "<pre>";
         var_dump($attributes);
+        var_dump($event->changedAttributes);
+        var_dump($changed_attributes);
         echo "</pre>";
         die();
+        $x = $this->owner->db->createCommand('INSERT INTO [[wallets_log]] ([[changed_attributes]]) VALUES (:x)',['x' => '{'.join(',',['a1','a2','a3','a4']).'}'])->rawSql;
+        die($x);
 */
+
         if(! $log->save()) {
             throw new ErrorException(print_r($log->errors,true));
         }
