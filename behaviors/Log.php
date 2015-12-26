@@ -82,14 +82,23 @@ class Log extends Behavior
      *
      * @param \yii\db\AfterSaveEvent $event
      */
-    public function getLogged($attributes)
+    public function getLogged($attributes = NULL)
     {
+        $attr = [];
         if(is_string($attributes)) {
-            $attributes[] = $attributes;
+            $attr[] = $attributes;
+        }elseif(is_array($attributes)) {
+            $attr = $attributes;
+        }
+
+        if(count($attr) > 0) {
+            $array = '{'.implode(',',$attr).'}';
+        } else {
+            $array = NULL;
         }
         return $this->owner
             ->hasMany($this->logClass,['doc_id' => 'id'])
-//            ->andFilterWhere()
+            ->andFilterWhere(['&&',$this->changedAttributesField,$array])
         ;
     }
 
@@ -111,18 +120,6 @@ class Log extends Behavior
         } else {
             $this->_to_save_log = false;
         }
-/*
-        echo "<pre>";
-        var_dump($this->owner->{$this->timeField});
-        var_dump($attributes);
-        echo "dirty\n";
-        var_dump($dirty);
-        echo "active\n";
-        var_dump($active);
-        var_dump($diff);
-        echo "</pre>";
-        die();
-*/
     }
 
     /**
