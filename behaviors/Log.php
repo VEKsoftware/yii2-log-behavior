@@ -5,6 +5,8 @@ use Yii;
 use yii\db\ActiveRecord;
 use yii\base\Behavior;
 use yii\db\AfterSaveEvent;
+use yii\db\StaleObjectException;
+use yii\validators\Validator;
 
 /**
  * Behavior class for logging all changes to a log table.
@@ -42,6 +44,12 @@ class Log extends Behavior
     public $changedAttributesField = 'changed_attributes';
 
     /**
+     * Field for version lock data. It is used to forbid save if other process had changed the record before.
+     * Default: 'version'
+     */
+    public $versionField;
+
+    /**
      * Field where the time of last change is stored
      * Default: 'atime'
      */
@@ -73,6 +81,12 @@ class Log extends Behavior
         }
         if (!class_exists($this->logClass, false)) {
             throw new ErrorException('Model for logging "'.$this->logClass.'" ');
+        }
+
+        if(isset($this->versionField)) {
+            $owner->validators[] = Validator::createValidator('required',$owner,$this->versionField,[]);
+            $owner->validators[] = Validator::createValidator('string',$owner,$this->versionField,['max' => '50']);
+            $owner->validators[] = Validator::createValidator('match',$owner,$this->versionField,['pattern' => '/^[0-9]+$/']);
         }
         return parent::attach($owner);
     }
@@ -109,6 +123,7 @@ class Log extends Behavior
      */
     public function logBeforeSave($event)
     {
+        // Computing attributes to save (diff)
         $attributes = array_diff($this->logAttributes,[$this->timeField]);
         $new = $this->owner->getDirtyAttributes($attributes);
         $old = $this->owner->oldAttributes;
@@ -120,6 +135,18 @@ class Log extends Behavior
         } else {
             $this->_to_save_log = false;
         }
+
+        // Check current version of the record before update
+        if($event->name === 'beforeUpdate' && isset($this->versionField)) {
+            $row = $this->owner->find($this->owner->primaryKey)->select($this->versionField)->asArray()->one();
+            if(isset($row[$this->versionField]) && (string)$row[$this->versionField] !== $this->owner->getAttribute($this->versionField)) {
+                throw new StaleObjectException('The object being updated is outdated.');
+            }
+        }
+        $difference = '9223372036854775806';
+        $rand_percent = bcdiv(mt_rand(), mt_getrandmax(), 12);
+        $version = bcmul($difference, $rand_percent, 0);
+        $this->owner->setAttribute($this->versionField, $version);
     }
 
     /**
