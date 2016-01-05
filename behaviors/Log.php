@@ -131,7 +131,7 @@ class Log extends Behavior
         $diff = array_diff($new,$old);
         $this->_changed_attributes = $diff;
         if(count($diff) > 0) {
-            $this->owner->{$this->timeField} = date('Y-m-d H:i:s');
+            $this->owner->{$this->timeField} = date('Y-m-d H:i:sP');
             $this->_to_save_log = true;
         } else {
             $this->_to_save_log = false;
