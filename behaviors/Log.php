@@ -137,16 +137,18 @@ class Log extends Behavior
         }
 
         // Check current version of the record before update
-        if($event->name === 'beforeUpdate' && isset($this->versionField)) {
-            $row = $this->owner->find($this->owner->primaryKey)->select($this->versionField)->asArray()->one();
-            if(isset($row[$this->versionField]) && (string)$row[$this->versionField] !== $this->owner->getAttribute($this->versionField)) {
-                throw new StaleObjectException('The object being updated is outdated.');
+        if(isset($this->versionField)) {
+            if($event->name === 'beforeUpdate') {
+                $row = $this->owner->find($this->owner->primaryKey)->select($this->versionField)->asArray()->one();
+                if(isset($row[$this->versionField]) && (string)$row[$this->versionField] !== $this->owner->getAttribute($this->versionField)) {
+                    throw new StaleObjectException('The object being updated is outdated.');
+                }
             }
+            $difference = '9223372036854775806';
+            $rand_percent = bcdiv(mt_rand(), mt_getrandmax(), 12);
+            $version = bcmul($difference, $rand_percent, 0);
+            $this->owner->setAttribute($this->versionField, $version);
         }
-        $difference = '9223372036854775806';
-        $rand_percent = bcdiv(mt_rand(), mt_getrandmax(), 12);
-        $version = bcmul($difference, $rand_percent, 0);
-        $this->owner->setAttribute($this->versionField, $version);
     }
 
     /**
