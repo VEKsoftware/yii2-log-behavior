@@ -83,7 +83,8 @@ class Log extends Behavior
             throw new ErrorException('Model for logging "'.$this->logClass.'" ');
         }
 
-        if(isset($this->versionField)) {
+        if(isset($this->versionField) && !$owner->isNewRecord) {
+//            die('new: '.$owner->isNewRecord);
             $owner->validators[] = Validator::createValidator('required',$owner,$this->versionField,[]);
             $owner->validators[] = Validator::createValidator('string',$owner,$this->versionField,['max' => '50']);
             $owner->validators[] = Validator::createValidator('match',$owner,$this->versionField,['pattern' => '/^[0-9]+$/']);
@@ -139,8 +140,8 @@ class Log extends Behavior
         // Check current version of the record before update
         if(isset($this->versionField)) {
             if($event->name === 'beforeUpdate') {
-                $row = $this->owner->find($this->owner->primaryKey)->select($this->versionField)->asArray()->one();
-                if(isset($row[$this->versionField]) && (string)$row[$this->versionField] !== $this->owner->getAttribute($this->versionField)) {
+                $row = $this->owner->find()->where($this->owner->getPrimaryKey(true))->select($this->versionField)->asArray()->one();
+                if(isset($row[$this->versionField]) && (string)$row[$this->versionField] !== (string)$this->owner->getAttribute($this->versionField)) {
                     throw new StaleObjectException('The object being updated is outdated.');
                 }
             }
@@ -170,16 +171,6 @@ class Log extends Behavior
 
         $logClass = $this->logClass;
         $log = new $logClass($attributes);
-/*
-        echo "<pre>";
-        var_dump($attributes);
-        var_dump($event->changedAttributes);
-        var_dump($changed_attributes);
-        echo "</pre>";
-        die();
-        $x = $this->owner->db->createCommand('INSERT INTO [[wallets_log]] ([[changed_attributes]]) VALUES (:x)',['x' => '{'.join(',',['a1','a2','a3','a4']).'}'])->rawSql;
-        die($x);
-*/
 
         if(! $log->save()) {
             throw new ErrorException(print_r($log->errors,true));
