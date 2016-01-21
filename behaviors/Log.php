@@ -36,6 +36,11 @@ class Log extends Behavior
      * Default: 'changed_by'
      */
     public $changedByField = 'changed_by';
+    
+    /**
+     * Value for 'changedByField', needed in console mode of Yii2 application 
+     */
+    public $changedByValue;
 
     /**
      * Field to store changed attributes
@@ -167,7 +172,12 @@ class Log extends Behavior
         $attributes['doc_id'] = $attributes['id'];
         unset($attributes['id']);
         $attributes[$this->changedAttributesField] = '{'.implode(',',array_keys($this->_changed_attributes)).'}';
-        $attributes[$this->changedByField] = Yii::$app->user->id;
+        
+        if( !(\Yii::$app instanceof \Yii\console\Application) ) {
+            $attributes[$this->changedByField] = Yii::$app->user->id;
+        } else {
+            $attributes[$this->changedByField] = $this->changedByValue;
+        }
 
         $logClass = $this->logClass;
         $log = new $logClass($attributes);
