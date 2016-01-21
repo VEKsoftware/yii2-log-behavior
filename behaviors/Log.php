@@ -128,8 +128,9 @@ class Log extends Behavior
         $attributes = array_diff($this->logAttributes,[$this->timeField]);
         $new = $this->owner->getDirtyAttributes($attributes);
         $old = $this->owner->oldAttributes;
-        $diff = array_diff($new,$old);
+        $diff = array_diff_assoc($new,$old);
         $this->_changed_attributes = $diff;
+        die( var_dump($diff) );
         if(count($diff) > 0) {
             $this->owner->{$this->timeField} = date('Y-m-d H:i:sP');
             $this->_to_save_log = true;
