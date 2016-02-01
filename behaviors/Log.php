@@ -172,11 +172,9 @@ class Log extends Behavior
         $attributes['doc_id'] = $attributes['id'];
         unset($attributes['id']);
         $attributes[$this->changedAttributesField] = '{'.implode(',',array_keys($this->_changed_attributes)).'}';
-        
-        if( !(\Yii::$app instanceof \Yii\console\Application) ) {
-            $attributes[$this->changedByField] = Yii::$app->user->id;
-        } else {
-            $attributes[$this->changedByField] = $this->changedByValue;
+
+        if($this->changedByField) {
+            $attributes[$this->changedByField] = Yii::$app->user->isGuest ? NULL : Yii::$app->user->id;
         }
 
         $logClass = $this->logClass;
