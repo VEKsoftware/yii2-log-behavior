@@ -174,7 +174,11 @@ class Log extends Behavior
         $attributes[$this->changedAttributesField] = '{'.implode(',',array_keys($this->_changed_attributes)).'}';
 
         if($this->changedByField) {
-            $attributes[$this->changedByField] = Yii::$app->user->isGuest ? NULL : Yii::$app->user->id;
+            if( Yii::$app instanceof \Yii\console\Application ) {
+                $attributes[$this->changedByField] = NULL;
+            } else {
+                $attributes[$this->changedByField] = Yii::$app->user->isGuest ? NULL : Yii::$app->user->id;
+            }
         }
 
         $logClass = $this->logClass;
