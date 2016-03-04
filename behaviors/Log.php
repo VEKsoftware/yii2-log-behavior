@@ -1,4 +1,5 @@
 <?php
+
 namespace log\behaviors;
 
 use Yii;
@@ -30,41 +31,41 @@ class Log extends Behavior
     public $owner;
 
     /**
-     * array A list of all attributes to be saved in the log table
+     * array A list of all attributes to be saved in the log table.
      */
     public $logAttributes;
 
     /**
-     * Class name for the log model
+     * Class name for the log model.
      */
     public $logClass;
 
     /**
      * Field of the table to store id of the user who changed the record
-     * Default: 'changed_by'
+     * Default: 'changed_by'.
      */
     public $changedByField = 'changed_by';
 
     /**
-     * Value for 'changedByField', needed in console mode of Yii2 application
+     * Value for 'changedByField', needed in console mode of Yii2 application.
      */
     public $changedByValue;
 
     /**
      * Field to store changed attributes
-     * Default: 'changed_attributes'
+     * Default: 'changed_attributes'.
      */
     public $changedAttributesField = 'changed_attributes';
 
     /**
      * Field for version lock data. It is used to forbid save if other process had changed the record before.
-     * Default: 'version'
+     * Default: 'version'.
      */
     public $versionField;
 
     /**
      * Field where the time of last change is stored
-     * Default: 'atime'
+     * Default: 'atime'.
      */
     public $timeField = 'atime';
 
@@ -86,20 +87,22 @@ class Log extends Behavior
 
     /**
      * @inherit
+     *
      * @param ActiveRecord $owner
+     *
      * @throws ErrorException
      */
     public function attach($owner)
     {
         if (is_null($this->logClass)) {
-            $this->logClass = $owner->className() . "Log";
+            $this->logClass = $owner->className().'Log';
         }
         if (!class_exists($this->logClass, false)) {
-            throw new ErrorException('Model for logging "' . $this->logClass . '" ');
+            throw new ErrorException('Model for logging "'.$this->logClass.'" ');
         }
 
         if (isset($this->versionField) && !$owner->isNewRecord) {
-//            die('new: '.$owner->isNewRecord);
+            // die('new: '.$owner->isNewRecord);
             $owner->validators[] = Validator::createValidator('required', $owner, $this->versionField, []);
             $owner->validators[] = Validator::createValidator('string', $owner, $this->versionField, ['max' => '50']);
             $owner->validators[] = Validator::createValidator('match', $owner, $this->versionField, ['pattern' => '/^[0-9]+$/']);
@@ -108,10 +111,12 @@ class Log extends Behavior
     }
 
     /**
-     * Saves a record to the log table
+     * Saves a record to the log table.
      *
      * @param null $attributes
+     *
      * @return ActiveQueryInterface
+     *
      * @internal param AfterSaveEvent $event
      */
     public function getLogged($attributes = null)
@@ -124,19 +129,21 @@ class Log extends Behavior
         }
 
         if (count($attr) > 0) {
-            $array = '{' . implode(',', $attr) . '}';
+            $array = '{'.implode(',', $attr).'}';
         } else {
             $array = null;
         }
+
         return $this->owner
             ->hasMany($this->logClass, ['doc_id' => 'id'])
             ->andFilterWhere(['&&', $this->changedAttributesField, $array]);
     }
 
     /**
-     * Sets the time of change
+     * Sets the time of change.
      *
      * @param Event $event
+     *
      * @throws StaleObjectException
      */
     public function logBeforeSave($event)
@@ -158,7 +165,7 @@ class Log extends Behavior
         if (isset($this->versionField)) {
             if ($event->name === 'beforeUpdate') {
                 $row = $this->owner->find()->where($this->owner->getPrimaryKey(true))->select($this->versionField)->asArray()->one();
-                if (isset($row[$this->versionField]) && (string)$row[$this->versionField] !== (string)$this->owner->getAttribute($this->versionField)) {
+                if (isset($row[$this->versionField]) && (string) $row[$this->versionField] !== (string) $this->owner->getAttribute($this->versionField)) {
                     throw new StaleObjectException('The object being updated is outdated.');
                 }
             }
@@ -170,21 +177,28 @@ class Log extends Behavior
     }
 
     /**
-     * Saves a record to the log table
+     * Saves a record to the log table.
      *
      * @param \yii\db\AfterSaveEvent $event
+     *
      * @throws ErrorException
      */
     public function logAfterSave($event)
     {
-        if (!$event instanceof AfterSaveEvent) return;
-        if (is_null($event->changedAttributes)) return;
-        if (!$this->_to_save_log) return;
+        if (!$event instanceof AfterSaveEvent) {
+            return;
+        }
+        if (is_null($event->changedAttributes)) {
+            return;
+        }
+        if (!$this->_to_save_log) {
+            return;
+        }
 
         $attributes = $this->owner->getAttributes($this->logAttributes);
         $attributes['doc_id'] = $attributes['id'];
         unset($attributes['id']);
-        $attributes[$this->changedAttributesField] = '{' . implode(',', array_keys($this->_changed_attributes)) . '}';
+        $attributes[$this->changedAttributesField] = '{'.implode(',', array_keys($this->_changed_attributes)).'}';
 
         if ($this->changedByField) {
             if (Yii::$app instanceof Application) {
