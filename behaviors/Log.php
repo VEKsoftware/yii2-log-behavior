@@ -78,10 +78,11 @@ class Log extends Behavior
     public function events()
     {
         return [
+            ActiveRecord::EVENT_INIT          => 'logInit',
             ActiveRecord::EVENT_BEFORE_INSERT => 'logBeforeSave',
             ActiveRecord::EVENT_BEFORE_UPDATE => 'logBeforeSave',
-            ActiveRecord::EVENT_AFTER_INSERT => 'logAfterSave',
-            ActiveRecord::EVENT_AFTER_UPDATE => 'logAfterSave',
+            ActiveRecord::EVENT_AFTER_INSERT  => 'logAfterSave',
+            ActiveRecord::EVENT_AFTER_UPDATE  => 'logAfterSave',
         ];
     }
 
@@ -137,6 +138,19 @@ class Log extends Behavior
         return $this->owner
             ->hasMany($this->logClass, ['doc_id' => 'id'])
             ->andFilterWhere(['&&', $this->changedAttributesField, $array]);
+    }
+
+    /**
+     * Sets version on init of new ActiveRecord
+     *
+     * @param Event $event
+     */
+    public function logInit($event)
+    {
+        $difference = '9223372036854775806';
+        $rand_percent = bcdiv(mt_rand(), mt_getrandmax(), 12);
+        $version = bcmul($difference, $rand_percent, 0);
+        $this->owner->setAttribute($this->versionField, $version);
     }
 
     /**
