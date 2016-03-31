@@ -69,8 +69,8 @@ class Log extends Behavior
      */
     public $timeField = 'atime';
 
-    private $_to_save_log = false;
-    private $_changed_attributes = [];
+    protected $_to_save_log = false;
+    protected $_changed_attributes = [];
 
     /**
      * @inherit
