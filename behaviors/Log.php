@@ -141,16 +141,24 @@ class Log extends Behavior
     }
 
     /**
+     * Sets new version for the current record
+     */
+    public function setNewVersion()
+    {
+        $difference = '9223372036854775806';
+        $rand_percent = bcdiv(mt_rand(), mt_getrandmax(), 12);
+        $version = bcmul($difference, $rand_percent, 0);
+        $this->owner->setAttribute($this->versionField, $version);
+    }
+
+    /**
      * Sets version on init of new ActiveRecord
      *
      * @param Event $event
      */
     public function logInit($event)
     {
-        $difference = '9223372036854775806';
-        $rand_percent = bcdiv(mt_rand(), mt_getrandmax(), 12);
-        $version = bcmul($difference, $rand_percent, 0);
-        $this->owner->setAttribute($this->versionField, $version);
+        $this->setNewVersion();
     }
 
     /**
@@ -183,10 +191,7 @@ class Log extends Behavior
                     throw new StaleObjectException('The object being updated is outdated.');
                 }
             }
-            $difference = '9223372036854775806';
-            $rand_percent = bcdiv(mt_rand(), mt_getrandmax(), 12);
-            $version = bcmul($difference, $rand_percent, 0);
-            $this->owner->setAttribute($this->versionField, $version);
+            $this->setNewVersion();
         }
     }
 
