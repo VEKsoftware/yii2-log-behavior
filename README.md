@@ -75,6 +75,9 @@ That's all. All time you save your model the log behavior will be called and ins
 
 ### MultipleActiveRecord
 
+>#Notice
+>In current version saveMultiple supports only PostgreSql
+
 To save an array of models in one query you need to use ``log\base\MultipleActiveRecrod`` class as a parent of your model. Than you can use ``saveMultiple()`` method. Do it in the following way.
 ```php
 <?php
