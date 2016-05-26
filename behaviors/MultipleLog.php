@@ -177,11 +177,12 @@ class MultipleLog extends Log
         $attributes[$this->changedAttributesField] = '{' . implode(',', array_keys($this->_changed_attributes)) . '}';
 
         if ($this->changedByField) {
-            if (Yii::$app instanceof Application) {
-                $attributes[$this->changedByField] = null;
-            } else {
-                $attributes[$this->changedByField] = Yii::$app->user->isGuest ? null : Yii::$app->user->id;
-            }
+            
+            if( !isset(Yii::$app->user) || empty(Yii::$app->user) ) throw new \Exception('Log behavior requires a user identity in application.');
+            if( empty(Yii::$app->user->id) ) throw new \Exception('Log behavior requires an authorized user.');
+            
+            $attributes[$this->changedByField] = Yii::$app->user->id;
+            
         }
 
         /** @var VekActiveRecord $logClass */
