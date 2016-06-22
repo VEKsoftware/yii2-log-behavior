@@ -139,7 +139,7 @@ class MultipleLog extends Log
         $diff = array_diff_assoc($new, $old);
         $this->_changed_attributes = $diff;
         if (count($diff) > 0) {
-            $this->owner->{$this->timeField} = date('Y-m-d H:i:sP');
+            $this->owner->{$this->timeField} = static::returnTimeStamp(); 
             $this->_to_save_log = true;
         } else {
             $this->_to_save_log = false;
