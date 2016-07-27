@@ -220,12 +220,18 @@ class Log extends Behavior
         $attributes[$this->changedAttributesField] = '{'.implode(',', array_keys($this->_changed_attributes)).'}';
 
         if ($this->changedByField) {
-            
-            if( !isset(Yii::$app->user) || empty(Yii::$app->user) ) throw new \Exception('Log behavior requires a user identity in application.');
-            if( empty(Yii::$app->user->id) ) throw new \Exception('Log behavior requires an authorized user.');
-            
-            $attributes[$this->changedByField] = Yii::$app->user->id;
-            
+            $user_id = NULL;
+            if(is_callable($this->changedByValue)) {
+                $attributes[$this->changedByField] = call_user_func($this->changedByValue);
+            } else if(isset($this->changedByValue)) {
+                $attributes[$this->changedByField] = $this->changedByValue;
+            } elseif(Yii::$app->user->isGuest) {
+                throw new \Exception('Log behavior requires a loged-in user to store changedBy.');
+            } elseif(Yii::$app->user->id) {
+                $attributes[$this->changedByField] = Yii::$app->user->id;
+            } else {
+                throw new \Exception('Somethingh unimplied in log-behavior.');
+            }
         }
 
         $logClass = $this->logClass;
