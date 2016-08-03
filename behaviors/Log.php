@@ -41,6 +41,12 @@ class Log extends Behavior
     public $logClass;
 
     /**
+     * Field to save link to base model from the logged model
+     * Default: 'doc_id'.
+     */
+    public $docId = 'doc_id';
+
+    /**
      * Field of the table to store id of the user who changed the record
      * Default: 'changed_by'.
      */
@@ -71,6 +77,7 @@ class Log extends Behavior
 
     protected $_to_save_log = false;
     protected $_changed_attributes = [];
+    protected $_to_save_attributes = [];
     
     protected $_beforeLogAttributes = [];
     protected $_closureLogAttributes = [];
@@ -174,36 +181,43 @@ class Log extends Behavior
     public function logBeforeSave($event)
     {
         $logAttributes = $this->logAttributes;
-        
-        // формируем массив атрибутов и их значений,
-        // которые получаются из анонимных функций
-        $closureAttributes = [];
-        foreach( $logAttributes as $attrKey => $attrValue ) {
-            
-            if( $attrValue instanceof \Closure ) {
-                
-                $closureAttributes[ $attrKey ] = $attrValue( $this->owner );
-                unset( $logAttributes[ $attrKey ] );
-                
+
+        $this->_to_save_log = false;
+        foreach($logAttributes as $key => $val) {
+            if(is_int($aKey)) {
+                // Значения - это имена атрибутов
+                $aName = $val;
+                $aValue = $this->owner->getAttribute($aName);
+            } elseif($val instanceof \Closure) {
+                // Ключ - имя атрибута, значение - вычисляемое
+                $aName = $key;
+                $aValue = call_user_func($val);
+            } else {
+                $aName = $key;
+                $aValue = $val;
             }
-            
+
+            if($this->owner->hasAttribute($aName)) {
+                if($aName === $this->timeField) {
+                    continue;
+                } elseif($this->owner->getOldAttribute($aName) != $aValue) {
+                    $this->_to_save_attributes[$aName] = $aValue;
+                    $this->_ta_save_log = true;
+                    $this->_changed_attributes[] = $aName;
+                } else {
+                    $this->_to_save_attributes[$aName] = $aValue;
+                }
+            } else {
+                $this->_to_save_attributes[$aName] = $aValue;
+            }
         }
-        
-        $this->_beforeLogAttributes = $logAttributes;
-        $this->_closureLogAttributes = $closureAttributes;
-        
-        // Computing attributes to save (diff)
-        $attributes = array_diff($logAttributes, [$this->timeField]);
-        
-        $new = array_replace( $this->owner->getDirtyAttributes($attributes), $closureAttributes );
-        $old = $this->owner->oldAttributes;
-        $diff = array_diff_assoc($new, $old);
-        $this->_changed_attributes = $diff;
-        if (count($diff) > 0) {
-            $this->owner->{$this->timeField} = static::returnTimeStamp();
-            $this->_to_save_log = true;
+
+        if ($this->_to_save_log ) {
+            $time = static::returnTimeStamp();
+            $this->owner->{$this->timeField} = $time;
+            $this->_to_save_attributes[$this->timeField] = $time;
         } else {
-            $this->_to_save_log = false;
+            return true;
         }
 
         // Check current version of the record before update
@@ -216,6 +230,8 @@ class Log extends Behavior
             }
             $this->setNewVersion();
         }
+        $this->_to_save_attributes[$this->versionField] = $this->owner->{$this->versionField};
+        return true;
     }
 
     /**
@@ -237,35 +253,19 @@ class Log extends Behavior
             return;
         }
 
-        $attributes = $this->owner->getAttributes($this->_beforeLogAttributes);
-        $attributes['doc_id'] = $attributes['id'];
-        unset($attributes['id']);
-        $attributes[$this->changedAttributesField] = '{'.implode(',', array_keys($this->_changed_attributes)).'}';
-
-        if ($this->changedByField) {
-            $user_id = NULL;
-            if(is_callable($this->changedByValue)) {
-                $attributes[$this->changedByField] = call_user_func($this->changedByValue);
-            } else if(isset($this->changedByValue)) {
-                $attributes[$this->changedByField] = $this->changedByValue;
-            } elseif(Yii::$app->user->isGuest) {
-                throw new \Exception('Log behavior requires a loged-in user to store changedBy.');
-            } elseif(Yii::$app->user->id) {
-                $attributes[$this->changedByField] = Yii::$app->user->id;
-            } else {
-                throw new \Exception('Somethingh unimplied in log-behavior.');
-            }
-        }
+        $this->_to_save_attributes[$this->docId] = $this->_to_save_attributes['id'];
+        unset($this->_to_save_attributes['id']);
+        $this->_to_save_attributes[$this->changedAttributesField] = '{'.implode(',', array_keys($this->_changed_attributes)).'}';
 
         $logClass = $this->logClass;
         /** @var ActiveRecord $log */
-        $log = new $logClass( array_replace( $attributes, $this->_closureLogAttributes ) );
+        $log = new $logClass( $this->_to_save_attributes );
 
         if (!$log->save()) {
             throw new ErrorException(print_r($log->errors, true));
         }
     }
-    
+
     /**
      * получить текущую отметку времени в текстовом формате
      */
