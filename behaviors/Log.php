@@ -170,9 +170,26 @@ class Log extends Behavior
      */
     public function logBeforeSave($event)
     {
+        $logAttributes = $this->logAttributes;
+        
+        // формируем массив атрибутов и их значений,
+        // которые получаются из анонимных функций
+        $closureAttributes = [];
+        foreach( $logAttributes as $attrKey => $attrValue ) {
+            
+            if( $attrValue instanceof \Closure ) {
+                
+                $closureAttributes[ $attrKey ] = $attrValue( $this->owner );
+                unset( $logAttributes[ $attrKey ] );
+                
+            }
+            
+        }
+        
         // Computing attributes to save (diff)
-        $attributes = array_diff($this->logAttributes, [$this->timeField]);
-        $new = $this->owner->getDirtyAttributes($attributes);
+        $attributes = array_diff($logAttributes, [$this->timeField]);
+        
+        $new = array_replace( $this->owner->getDirtyAttributes($attributes), $closureAttributes );
         $old = $this->owner->oldAttributes;
         $diff = array_diff_assoc($new, $old);
         $this->_changed_attributes = $diff;
