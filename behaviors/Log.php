@@ -71,6 +71,9 @@ class Log extends Behavior
 
     protected $_to_save_log = false;
     protected $_changed_attributes = [];
+    
+    protected $_beforeLogAttributes = [];
+    protected $_closureLogAttributes = [];
 
     /**
      * @inherit
@@ -186,6 +189,9 @@ class Log extends Behavior
             
         }
         
+        $this->_beforeLogAttributes = $logAttributes;
+        $this->_closureLogAttributes = $closureAttributes;
+        
         // Computing attributes to save (diff)
         $attributes = array_diff($logAttributes, [$this->timeField]);
         
@@ -231,7 +237,7 @@ class Log extends Behavior
             return;
         }
 
-        $attributes = $this->owner->getAttributes($this->logAttributes);
+        $attributes = $this->owner->getAttributes($this->_beforeLogAttributes);
         $attributes['doc_id'] = $attributes['id'];
         unset($attributes['id']);
         $attributes[$this->changedAttributesField] = '{'.implode(',', array_keys($this->_changed_attributes)).'}';
@@ -253,7 +259,7 @@ class Log extends Behavior
 
         $logClass = $this->logClass;
         /** @var ActiveRecord $log */
-        $log = new $logClass($attributes);
+        $log = new $logClass( array_replace( $attributes, $this->_closureLogAttributes ) );
 
         if (!$log->save()) {
             throw new ErrorException(print_r($log->errors, true));
