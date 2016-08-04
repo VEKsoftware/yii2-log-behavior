@@ -256,10 +256,11 @@ class Log extends Behavior
         $this->_to_save_attributes[$this->docId] = $this->_to_save_attributes['id'];
         unset($this->_to_save_attributes['id']);
         $this->_to_save_attributes[$this->changedAttributesField] = '{'.implode(',', array_keys($this->_changed_attributes)).'}';
-
+        
         $logClass = $this->logClass;
         /** @var ActiveRecord $log */
-        $log = new $logClass( $this->_to_save_attributes );
+        $log = new $logClass();
+        $log->setAttributes( array_intersect_key( $this->_to_save_attributes, $log->getAttributes() ) );
 
         if (!$log->save()) {
             throw new ErrorException(print_r($log->errors, true));
