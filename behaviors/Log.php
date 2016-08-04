@@ -184,7 +184,7 @@ class Log extends Behavior
 
         $this->_to_save_log = false;
         foreach($logAttributes as $key => $val) {
-            if(is_int($aKey)) {
+            if(is_int($key)) {
                 // Значения - это имена атрибутов
                 $aName = $val;
                 $aValue = $this->owner->getAttribute($aName);
@@ -202,7 +202,7 @@ class Log extends Behavior
                     continue;
                 } elseif($this->owner->getOldAttribute($aName) != $aValue) {
                     $this->_to_save_attributes[$aName] = $aValue;
-                    $this->_ta_save_log = true;
+                    $this->_to_save_log = true;
                     $this->_changed_attributes[] = $aName;
                 } else {
                     $this->_to_save_attributes[$aName] = $aValue;
