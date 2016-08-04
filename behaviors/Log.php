@@ -255,7 +255,7 @@ class Log extends Behavior
 
         $this->_to_save_attributes[$this->docId] = $this->owner->id;
         unset($this->_to_save_attributes['id']);
-        $this->_to_save_attributes[$this->changedAttributesField] = '{'.implode(',', array_keys($this->_changed_attributes)).'}';
+        $this->_to_save_attributes[$this->changedAttributesField] = '{'.implode(',', array_values($this->_changed_attributes)).'}';
         
         $logClass = $this->logClass;
         /** @var ActiveRecord $log */
