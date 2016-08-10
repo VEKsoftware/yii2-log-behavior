@@ -193,7 +193,7 @@ class Log extends Behavior
             } elseif($val instanceof \Closure) {
                 // Ключ - имя атрибута, значение - вычисляемое
                 $aName = $key;
-                $aValue = call_user_func($val);
+                $aValue = call_user_func($val,$this->owner);
             } else {
                 $aName = $key;
                 $aValue = $val;
